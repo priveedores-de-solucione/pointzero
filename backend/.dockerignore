@@ -1,0 +1,26 @@
+# Secrets: never bake these into an image. Pass them as environment variables instead.
+.env
+.env.*
+*.pem
+*.key
+
+# Python junk
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Project files not needed at runtime
+tests/
+migrations/
+Dockerfile
+.dockerignore
+docker-compose.yml
+.git/
+.gitignore
+.vscode/
+.idea/
+*.md

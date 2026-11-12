@@ -1,0 +1,50 @@
+# virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.hypothesis/
+
+# env files with secrets (keep the example)
+.env
+.env.*
+!.env.example
+
+# packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# testing / coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# logs / local data
+*.log
+logs/
+*.sqlite3
+*.db
+
+# docker local overrides
+docker-compose.override.yml
+
+# editor / OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db

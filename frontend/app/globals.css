@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  POINTZERO token system — dark by default (no light mode in v1).
+  PZ tokens are mapped onto the shadcn variables so every existing
+  component (dashboards, forms, dialogs) inherits the new palette.
+*/
+@layer base {
+  :root {
+    --background: 216 25% 5%;            /* pz-void      #0B0F14 */
+    --foreground: 214 33% 94%;           /* pz-white     #EDF2F7 */
+    --card: 210 17% 8%;                  /* pz-surface   #0F1215 */
+    --card-foreground: 210 20% 78%;      /* pz-text      #B8C4D0 */
+    --popover: 210 17% 8%;
+    --popover-foreground: 214 33% 94%;
+    --primary: 77 100% 50%;             /* pz-signal    #A8FF00 */
+    --primary-foreground: 210 20% 4%;    /* void on signal */
+    --secondary: 210 17% 11%;
+    --secondary-foreground: 210 20% 78%;
+    --muted: 213 16% 20%;                /* pz-muted     #2C333C */
+    --muted-foreground: 212 12% 49%;     /* pz-text-dim  #6B7785 */
+    --accent: 210 17% 12%;               /* hover surface, not a brand colour */
+    --accent-foreground: 214 33% 94%;
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 77 100% 50%;
+    --success-foreground: 210 20% 4%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 210 20% 4%;
+    --border: 212 17% 14%;               /* pz-border    #1E2329 */
+    --input: 212 17% 14%;
+    --ring: 77 100% 50%;
+    --chart-1: 77 100% 50%;
+    --chart-2: 199 89% 55%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 262 83% 65%;
+    --chart-5: 0 72% 60%;
+    --radius: 0.5rem;
+    color-scheme: dark;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-card-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4 {
+    @apply text-foreground;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  ::selection {
+    background: rgba(168, 255, 0, 0.25);
+    color: #edf2f7;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  /* Coordinate grid — 60px cells, pz-border at 40% */
+  .bg-pz-grid {
+    background-image:
+      linear-gradient(to right, rgba(30, 35, 41, 0.4) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(30, 35, 41, 0.4) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  .bg-pz-grid-strong {
+    background-image:
+      linear-gradient(to right, #1e2329 1px, transparent 1px),
+      linear-gradient(to bottom, #1e2329 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  /* Map-dot pattern for the campus hero */
+  .bg-pz-dots {
+    background-image: radial-gradient(#2c333c 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .pz-container {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 1280px;
+    padding-inline: 20px;
+  }
+  @media (min-width: 768px) {
+    .pz-container {
+      padding-inline: 40px;
+    }
+  }
+  .pz-section {
+    padding-block: 48px;
+  }
+  @media (min-width: 768px) {
+    .pz-section {
+      padding-block: 72px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .pz-section {
+      padding-block: 120px;
+    }
+  }
+  /* Hero page-load sequence: opacity + 12px Y, 300ms stagger. Hero only. */
+  .pz-rise {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: pz-rise 0.5s ease-out forwards;
+  }
+  .pz-rise-1 { animation-delay: 0ms; }
+  .pz-rise-2 { animation-delay: 300ms; }
+  .pz-rise-3 { animation-delay: 600ms; }
+  .pz-rise-4 { animation-delay: 900ms; }
+}
+
+@keyframes pz-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Motion answers action, not presence. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .pz-rise {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0f14;
+}
+::-webkit-scrollbar-thumb {
+  background: #2c333c;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7785;
+}

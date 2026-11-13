@@ -1,64 +1,94 @@
+'use client';
+
+import { useState } from 'react';
 import { DashboardShell } from '@/components/shared/dashboard-layout';
 import { StatusBadge } from '@/components/shared/pz-cards';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ApplicationStatus } from '@/lib/types';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AdminList, fmtDate, runAction } from '@/components/shared/admin-list';
+import { admin as adminApi, Application } from '@/lib/api';
+import { humanize } from '@/lib/mappers';
+import type { ApplicationStatus } from '@/lib/types';
 
-const mockApplications = [
-  { id: 'a1', name: 'Tolu Adebayo', type: 'founder', email: 'tolu@example.com', status: 'submitted' as ApplicationStatus, date: '2026-01-10' },
-  { id: 'a2', name: 'Kemi Osei', type: 'builder', email: 'kemi@example.com', status: 'under_review' as ApplicationStatus, date: '2026-01-08' },
-  { id: 'a3', name: 'Emeka Nwosu', type: 'student', email: 'emeka@example.com', status: 'interview' as ApplicationStatus, date: '2026-01-05' },
-  { id: 'a4', name: 'Zara Ibrahim', type: 'mentor', email: 'zara@example.com', status: 'accepted' as ApplicationStatus, date: '2026-01-03' },
-  { id: 'a5', name: 'Femi Cole', type: 'investor', email: 'femi@example.com', status: 'rejected' as ApplicationStatus, date: '2025-12-28' },
-];
+const statuses = ['SUBMITTED', 'UNDER_REVIEW', 'INTERVIEW', 'ACCEPTED', 'REJECTED', 'WAITLISTED', 'WITHDRAWN'];
+const DECIDABLE = ['SUBMITTED', 'UNDER_REVIEW', 'INTERVIEW', 'WAITLISTED'];
+const DECISION_TOAST = {
+  accept: 'Application accepted',
+  reject: 'Application rejected',
+  waitlist: 'Application waitlisted',
+  'request-info': 'More information requested',
+};
 
-const statuses: ApplicationStatus[] = ['draft', 'submitted', 'under_review', 'interview', 'accepted', 'rejected', 'waitlisted'];
+const applicantName = (a: Application) =>
+  [a.answers?.first_name, a.answers?.last_name].filter(Boolean).join(' ') || 'Applicant';
 
 export default function AdminApplicationsPage() {
+  const [reviewing, setReviewing] = useState<{ app: Application; refetch: () => void } | null>(null);
+  const [note, setNote] = useState('');
+
+  const decide = (decision: 'accept' | 'reject' | 'waitlist' | 'request-info') => {
+    if (!reviewing) return;
+    const { app, refetch } = reviewing;
+    runAction(() => adminApi.decideApplication(app.id, decision, note || undefined), DECISION_TOAST[decision], refetch);
+    setReviewing(null);
+    setNote('');
+  };
+
+  const app = reviewing?.app;
+
   return (
     <DashboardShell type="admin" title="Applications" subtitle="Review and manage applications">
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Input placeholder="Search applications…" className="max-w-xs" />
-          <div className="flex flex-wrap gap-2">
-            {statuses.map((s) => (
-              <Badge key={s} variant="outline" className="cursor-pointer capitalize hover:bg-muted">
-                {s.replace('_', ' ')}
-              </Badge>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-xl border border-border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockApplications.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell className="font-medium">{a.name}</TableCell>
-                  <TableCell className="capitalize">{a.type}</TableCell>
-                  <TableCell className="text-muted-foreground">{a.email}</TableCell>
-                  <TableCell><StatusBadge status={a.status} /></TableCell>
-                  <TableCell className="text-muted-foreground">{a.date}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm">Review</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      <AdminList<Application>
+        filters={statuses}
+        fetcher={({ page, limit, filter }) => adminApi.applications({ page, limit, status: filter })}
+        emptyTitle="No applications"
+        columns={[
+          { header: 'Name', cell: (a) => <span className="font-medium">{applicantName(a)}</span> },
+          { header: 'Type', cell: (a) => humanize(a.application_type) },
+          { header: 'Email', cell: (a) => <span className="text-muted-foreground">{a.answers?.email ?? '—'}</span> },
+          { header: 'Status', cell: (a) => <StatusBadge status={a.status.toLowerCase() as ApplicationStatus} /> },
+          { header: 'Submitted', cell: (a) => <span className="text-muted-foreground">{fmtDate(a.submitted_at)}</span> },
+        ]}
+        actions={(a, refetch) => (
+          <Button variant="ghost" size="sm" onClick={() => setReviewing({ app: a, refetch })}>Review</Button>
+        )}
+      />
+
+      <Dialog open={!!reviewing} onOpenChange={(o) => !o && setReviewing(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>{app && `${applicantName(app)} · ${humanize(app.application_type)}`}</DialogTitle></DialogHeader>
+          {app && (
+            <div className="space-y-4">
+              <dl className="max-h-72 space-y-2 overflow-y-auto text-sm">
+                {Object.entries(app.answers ?? {}).map(([k, v]) => (
+                  <div key={k}>
+                    <dt className="text-xs text-muted-foreground">{humanize(k)}</dt>
+                    <dd className="whitespace-pre-line">{String(v)}</dd>
+                  </div>
+                ))}
+              </dl>
+              {DECIDABLE.includes(app.status) ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label>Note to applicant (optional; required for “request info”)</Label>
+                    <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+                  </div>
+                  <DialogFooter className="flex-wrap gap-2">
+                    <Button variant="outline" onClick={() => decide('request-info')} disabled={!note.trim()}>Request info</Button>
+                    <Button variant="outline" onClick={() => decide('waitlist')}>Waitlist</Button>
+                    <Button variant="destructive" onClick={() => decide('reject')}>Reject</Button>
+                    <Button onClick={() => decide('accept')}>Accept</Button>
+                  </DialogFooter>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">This application is {humanize(app.status).toLowerCase()} and can no longer be decided.</p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardShell>
   );
 }

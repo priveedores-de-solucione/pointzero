@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useApi } from '@/hooks/use-api';
-import { mentors as mentorsApi, type Mentor, type PaginatedResponse } from '@/lib/api';
+import { mentors as mentorsApi, mentorship as mentorshipApi, type Mentor, type PaginatedResponse } from '@/lib/api';
+import { mapMentor } from '@/lib/mappers';
+import { toast } from 'sonner';
 
 const EXPERTISE_FILTERS = ['Product', 'Engineering', 'Fundraising', 'Marketing', 'Design', 'Operations'];
 
@@ -22,27 +24,26 @@ export default function MentorshipPage() {
 
   const mentorList = data?.items ?? [];
 
-  const filtered = search.trim()
-    ? mentorList.filter((m) => {
-        const name = m.profiles
-          ? `${m.profiles.first_name} ${m.profiles.last_name}`.toLowerCase()
-          : (m.name ?? '').toLowerCase();
-        return name.includes(search.toLowerCase()) ||
-          m.expertise?.some((e) => e.toLowerCase().includes(search.toLowerCase()));
-      })
-    : mentorList;
+  const q = search.trim().toLowerCase();
+  const normalised = mentorList
+    .map(mapMentor)
+    .filter((m) => !q || m.name.toLowerCase().includes(q) || m.expertise.some((e) => e.toLowerCase().includes(q)));
+
+  const [requestingId, setRequestingId] = useState<string | null>(null);
+  const requestSession = async (mentorId: string) => {
+    setRequestingId(mentorId);
+    try {
+      await mentorshipApi.request({ mentor_id: mentorId });
+      toast.success('Request sent. The mentor will be notified.');
+    } catch (err) {
+      toast.error((err as Error).message || 'Could not send request');
+    } finally {
+      setRequestingId(null);
+    }
+  };
 
   const toggleExpertise = (e: string) =>
     setActiveExpertise((prev) => (prev === e ? null : e));
-
-  // Normalise shape so MentorCard gets `name` and `avatar`
-  const normalised = filtered.map((m) => ({
-    ...m,
-    name: m.profiles
-      ? `${m.profiles.first_name} ${m.profiles.last_name}`
-      : (m.name ?? 'Mentor'),
-    avatar: m.profiles?.avatar_url ?? undefined,
-  }));
 
   return (
     <DashboardShell type="member" title="Mentorship" subtitle="Browse and connect with mentors">
@@ -85,7 +86,7 @@ export default function MentorshipPage() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {normalised.map((m) => (
-              <MentorCard key={m.id} mentor={m as any} />
+              <MentorCard key={m.id} mentor={m} onRequest={() => requestSession(m.id)} requesting={requestingId === m.id} />
             ))}
           </div>
         )}

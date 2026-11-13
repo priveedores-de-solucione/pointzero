@@ -11,44 +11,11 @@ import { EmptyState } from '@/components/shared/states';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useApi } from '@/hooks/use-api';
 import { startups as startupsApi, PaginatedResponse, Startup } from '@/lib/api';
+import { mapStartup } from '@/lib/mappers';
 
 const industries = ['All', 'Logistics', 'EdTech', 'HealthTech', 'FinTech', 'AgriTech'];
 const stages = ['All', 'Idea', 'Pre-seed', 'Seed', 'Series A'];
 
-function mapStartup(s: Startup) {
-  return {
-    id: s.id,
-    slug: s.slug,
-    name: s.name,
-    logo: s.logo_url ?? 'https://placehold.co/64x64',
-    description: s.description ?? '',
-    longDescription: '',
-    industry: s.industry ?? '',
-    stage: (s.stage ?? 'idea') as 'idea' | 'pre_seed' | 'seed' | 'series_a' | 'series_b' | 'growth',
-    location: s.location ?? '',
-    program: '',
-    cohort: '',
-    founders: (s.founders ?? []).map((f) => ({
-      id: f.profiles?.id ?? '',
-      name: `${f.profiles?.first_name ?? ''} ${f.profiles?.last_name ?? ''}`.trim(),
-      avatar: f.profiles?.avatar_url ?? '',
-      role: f.role,
-      bio: '',
-    })),
-    website: s.website ?? '',
-    problem: '',
-    solution: '',
-    product: '',
-    traction: '',
-    funding: '',
-    team: s.founders?.length ?? 1,
-    press: [],
-    socials: { twitter: '', linkedin: '', instagram: '' },
-    visibility: (s.is_public ? 'public' : 'private') as 'public' | 'private' | 'investor_only',
-    fundingStage: s.stage ?? '',
-    fundingAmount: '',
-  };
-}
 
 export default function StartupsPage() {
   const [search, setSearch] = useState('');

@@ -13,7 +13,7 @@ class MilestoneRepository(BaseRepository):
     def for_startups(self, startup_ids: list[str], status: Optional[str] = None, stage: Optional[str] = None) -> list:
         if not startup_ids:
             return []
-        q = self.query("*, startups(name,slug)").in_("startup_id", startup_ids)
+        q = self.query("*, startups:pz_startups(name,slug)").in_("startup_id", startup_ids)
         if status:
             q = q.eq("status", status)
         if stage:

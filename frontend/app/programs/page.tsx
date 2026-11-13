@@ -7,34 +7,11 @@ import { PzPageHero } from '@/components/shared/pz-hero';
 import { cn } from '@/lib/utils';
 import { useApi } from '@/hooks/use-api';
 import { programs as programsApi, PaginatedResponse, Program } from '@/lib/api';
+import { mapProgram } from '@/lib/mappers';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const filters = ['All', 'Accelerator', 'Academy', 'Labs', 'Residency'] as const;
 
-function mapProgram(p: Program) {
-  return {
-    id: p.id,
-    slug: p.slug,
-    name: p.name,
-    description: p.description,
-    longDescription: p.long_description ?? '',
-    type: p.type.toLowerCase() as 'accelerator' | 'academy' | 'residency' | 'labs' | 'demo_day',
-    status: p.status.toLowerCase() as 'active' | 'upcoming' | 'closed',
-    startDate: p.start_date ?? '',
-    endDate: p.end_date ?? '',
-    applicationDeadline: p.application_deadline ?? '',
-    capacity: p.capacity ?? 0,
-    enrolled: p.enrolled ?? 0,
-    cohort: p.cohort ?? '',
-    curriculum: [],
-    requirements: [],
-    benefits: [],
-    whoFor: [],
-    faq: [],
-    mentors: [],
-    image: p.image_url ?? 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  };
-}
 
 export default function ProgramsPage() {
   const [filter, setFilter] = useState<(typeof filters)[number]>('All');

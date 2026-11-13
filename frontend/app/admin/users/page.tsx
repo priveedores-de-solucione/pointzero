@@ -1,63 +1,90 @@
+'use client';
+
 import { DashboardShell } from '@/components/shared/dashboard-layout';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserRole } from '@/lib/types';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AdminList, fmtDate, runAction } from '@/components/shared/admin-list';
+import { useAuth } from '@/context/auth-context';
+import { admin as adminApi, User } from '@/lib/api';
+import { fullName, humanize } from '@/lib/mappers';
 
-const mockUsers = [
-  { id: 'u1', name: 'Jeremiah Adewale', email: 'j@example.com', role: 'founder' as UserRole, joined: '2025-12-01' },
-  { id: 'u2', name: 'Tolu Adebayo', email: 'tolu@example.com', role: 'builder' as UserRole, joined: '2026-01-02' },
-  { id: 'u3', name: 'Zara Ibrahim', email: 'zara@example.com', role: 'mentor' as UserRole, joined: '2025-11-15' },
-  { id: 'u4', name: 'Femi Cole', email: 'femi@example.com', role: 'investor' as UserRole, joined: '2025-10-10' },
-];
-
-const roles: UserRole[] = ['founder', 'builder', 'student', 'mentor', 'investor', 'partner', 'admin'];
+const roles = ['FOUNDER', 'BUILDER', 'STUDENT', 'MENTOR', 'INVESTOR', 'PARTNER', 'STAFF', 'ADMIN', 'SUPER_ADMIN'];
 
 export default function AdminUsersPage() {
+  const { user: me } = useAuth();
+
   return (
     <DashboardShell type="admin" title="Users" subtitle="Manage all ecosystem members">
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Input placeholder="Search users…" className="max-w-xs" />
-          <div className="flex flex-wrap gap-2">
-            {roles.map((r) => (
-              <Badge key={r} variant="outline" className="cursor-pointer capitalize hover:bg-muted">{r}</Badge>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-xl border border-border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockUsers.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8"><AvatarFallback>{u.name[0]}</AvatarFallback></Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{u.name}</p>
-                        <p className="text-xs text-muted-foreground">{u.email}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell><Badge variant="secondary" className="capitalize">{u.role}</Badge></TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{u.joined}</TableCell>
-                  <TableCell><Button variant="ghost" size="sm">Manage</Button></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      <AdminList<User>
+        searchPlaceholder="Search users…"
+        filters={roles}
+        fetcher={({ page, limit, q, filter }) => adminApi.users({ page, limit, q, role: filter })}
+        emptyTitle="No users found"
+        columns={[
+          {
+            header: 'User',
+            cell: (u) => (
+              <div className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={u.avatar_url} />
+                  <AvatarFallback>{(fullName(u) || u.email)[0]?.toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">{fullName(u, '—')}</p>
+                  <p className="text-xs text-muted-foreground">{u.email}</p>
+                </div>
+              </div>
+            ),
+          },
+          {
+            header: 'Role',
+            cell: (u) =>
+              u.id === me?.id ? (
+                <Badge variant="secondary">{humanize(u.role)}</Badge>
+              ) : (
+                <RoleSelect user={u} />
+              ),
+          },
+          {
+            header: 'Status',
+            cell: (u) => <Badge variant={u.status === 'ACTIVE' ? 'outline' : 'destructive'}>{humanize(u.status)}</Badge>,
+          },
+          { header: 'Joined', cell: (u) => <span className="text-sm text-muted-foreground">{fmtDate(u.created_at)}</span> },
+        ]}
+        actions={(u, refetch) =>
+          u.id === me?.id ? null : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                runAction(
+                  () => adminApi.updateUser(u.id, { status: u.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' }),
+                  u.status === 'ACTIVE' ? 'User suspended' : 'User reactivated',
+                  refetch,
+                )
+              }
+            >
+              {u.status === 'ACTIVE' ? 'Suspend' : 'Reactivate'}
+            </Button>
+          )
+        }
+      />
     </DashboardShell>
+  );
+}
+
+function RoleSelect({ user }: { user: User }) {
+  return (
+    <Select
+      defaultValue={user.role}
+      onValueChange={(role) => runAction(() => adminApi.updateUser(user.id, { role }), 'Role updated', () => undefined)}
+    >
+      <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        {roles.map((r) => <SelectItem key={r} value={r}>{humanize(r)}</SelectItem>)}
+      </SelectContent>
+    </Select>
   );
 }

@@ -10,30 +10,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useApi } from '@/hooks/use-api';
 import { events as eventsApi, PaginatedResponse, AppEvent } from '@/lib/api';
+import { mapEvent } from '@/lib/mappers';
 
 const tabs = ['Upcoming', 'Past'] as const;
 const filters = ['All', 'Workshop', 'Hackathon', 'Demo Day', 'Meetup', 'Investor Session', 'Community'];
 
-function mapEvent(e: AppEvent) {
-  const start = new Date(e.start_time);
-  return {
-    id: e.id,
-    slug: e.slug,
-    title: e.title,
-    description: e.description ?? '',
-    longDescription: '',
-    type: e.event_type.toLowerCase() as 'workshop' | 'hackathon' | 'demo_day' | 'meetup' | 'investor_session' | 'community',
-    status: (new Date(e.start_time) > new Date() ? 'upcoming' : 'past') as 'upcoming' | 'past' | 'live',
-    date: start.toISOString().split('T')[0],
-    time: start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    location: e.location ?? 'POINTZERO Campus',
-    capacity: e.capacity ?? 0,
-    registered: e.registrations_count ?? 0,
-    image: e.image_url ?? 'https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=1200',
-    speakers: [],
-    organizer: 'POINTZERO',
-  };
-}
 
 export default function EventsPage() {
   const [tab, setTab] = useState<(typeof tabs)[number]>('Upcoming');

@@ -14,7 +14,8 @@ app = FastAPI(title="POINTZERO API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL],
+    # FRONTEND_URL may list several origins, comma-separated (e.g. local dev + production).
+    allow_origins=[o.strip().rstrip("/") for o in settings.FRONTEND_URL.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

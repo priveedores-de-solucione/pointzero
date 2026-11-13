@@ -50,11 +50,11 @@ export default function PartnersPage() {
                     <div className="flex items-center gap-4">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {p.logo_url && (
-                        <img src={p.logo_url} alt={p.name} className="h-10 w-10 rounded-lg object-contain" />
+                        <img src={p.logo_url} alt={p.organization} className="h-10 w-10 rounded-lg object-contain" />
                       )}
                       <div>
-                        <h3 className="font-display font-semibold">{p.name}</h3>
-                        <Badge variant="secondary" className="mt-1 text-xs capitalize">{p.category}</Badge>
+                        <h3 className="font-display font-semibold">{p.organization}</h3>
+                        <Badge variant="secondary" className="mt-1 text-xs capitalize">{p.partner_type.toLowerCase().replace(/_/g, " ")}</Badge>
                       </div>
                     </div>
                     {p.description && (

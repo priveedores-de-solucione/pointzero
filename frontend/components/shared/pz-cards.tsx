@@ -29,7 +29,7 @@ const programStatus: Record<string, { label: string; className: string }> = {
 };
 
 /** B. Startup card */
-export function StartupCard({ startup }: { startup: Startup }) {
+export function StartupCard({ startup, href }: { startup: Startup; href?: string }) {
   const tagline = startup.description;
   const meta = [stageLabel(startup.stage), startup.industry, startup.cohort].filter(Boolean).join(' · ');
   const tags = [startup.program, startup.location].filter(Boolean).slice(0, 2);
@@ -65,7 +65,7 @@ export function StartupCard({ startup }: { startup: Startup }) {
             ))}
           </div>
           <Link
-            href={startup.website && startup.website !== '#' ? startup.website : `/startups/${startup.slug}`}
+            href={href ?? (startup.website && startup.website !== '#' ? startup.website : `/startups/${startup.slug}`)}
             className="inline-flex shrink-0 items-center gap-1 font-display text-sm font-semibold text-pz-text transition-colors duration-150 group-hover:text-pz-signal"
           >
             Visit <ArrowUpRight className="h-3.5 w-3.5" />
@@ -215,7 +215,7 @@ export function ResourceCard({ resource }: { resource: Resource }) {
   );
 }
 
-export function MentorCard({ mentor }: { mentor: Mentor }) {
+export function MentorCard({ mentor, onRequest, requesting }: { mentor: Mentor; onRequest?: () => void; requesting?: boolean }) {
   const availBadge = mentor.availability === 'available' ? 'default' : mentor.availability === 'limited' ? 'secondary' : 'outline';
   return (
     <Card className={cardHover}>
@@ -223,7 +223,7 @@ export function MentorCard({ mentor }: { mentor: Mentor }) {
         <div className="flex items-start gap-4">
           <Avatar className="h-16 w-16">
             <AvatarImage src={mentor.avatar} alt={mentor.name} />
-            <AvatarFallback>{mentor.name[0]}</AvatarFallback>
+            <AvatarFallback>{mentor.name?.[0] ?? '?'}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <h3 className="font-display font-semibold tracking-tight">{mentor.name}</h3>
@@ -237,8 +237,8 @@ export function MentorCard({ mentor }: { mentor: Mentor }) {
             <Badge key={e} variant="secondary" className="text-xs">{e}</Badge>
           ))}
         </div>
-        <Button variant="outline" size="sm" className="mt-4 w-full">
-          Request Session
+        <Button variant="outline" size="sm" className="mt-4 w-full" onClick={onRequest} disabled={!onRequest || requesting}>
+          {requesting ? 'Requesting…' : 'Request Session'}
         </Button>
       </CardContent>
     </Card>
@@ -316,7 +316,7 @@ export function IntroductionRequestCard({ request }: { request: IntroductionRequ
           <Badge variant={statusVariant[request.status]} className="capitalize">{request.status}</Badge>
         </div>
         <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{request.message}</p>
-        <p className="mt-2 text-xs text-muted-foreground">Submitted {request.createdAt}</p>
+        <p className="mt-2 text-xs text-muted-foreground">Submitted {new Date(request.createdAt).toLocaleDateString('en-US', { dateStyle: 'medium' })}</p>
       </CardContent>
     </Card>
   );

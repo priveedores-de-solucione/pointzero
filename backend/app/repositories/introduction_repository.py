@@ -9,7 +9,7 @@ class IntroductionRepository(BaseRepository):
     table = "introduction_requests"
 
     def get_detail(self, request_id: str) -> Optional[dict]:
-        res = self.query("*, investors(user_id,organization,investor_type), startups(name,slug,logo_url)") \
+        res = self.query("*, investors:pz_investors(user_id,organization,investor_type), startups:pz_startups(name,slug,logo_url)") \
             .eq("id", request_id).limit(1).execute()
         return res.data[0] if res.data else None
 

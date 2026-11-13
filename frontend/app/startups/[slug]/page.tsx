@@ -1,17 +1,28 @@
 'use client';
 
-import { use } from 'react';
 import { PublicPage } from '@/components/shared/public-page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Globe, MapPin, Users, TrendingUp, ExternalLink, Twitter, Linkedin, Instagram, Lock } from 'lucide-react';
-import { startups } from '@/lib/mock-data';
+import { useApi } from '@/hooks/use-api';
+import { startups as startupsApi } from '@/lib/api';
+import { mapStartup } from '@/lib/mappers';
+import { LoadingState } from '@/components/shared/states';
 
-export default function StartupProfilePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params);
-  const startup = startups.find((s) => s.slug === slug);
+export default function StartupProfilePage({ params }: { params: { slug: string } }) {
+  const { slug } = params;
+  const { data, loading } = useApi(() => startupsApi.get(slug), [slug]);
+  const startup = data ? mapStartup(data) : null;
+
+  if (loading) {
+    return (
+      <PublicPage>
+        <LoadingState className="py-32" />
+      </PublicPage>
+    );
+  }
 
   if (!startup) {
     return (
@@ -46,17 +57,17 @@ export default function StartupProfilePage({ params }: { params: Promise<{ slug:
               </div>
               <p className="mt-2 max-w-2xl text-muted-foreground">{startup.description}</p>
               <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" />{startup.location}</span>
+                {startup.location && <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" />{startup.location}</span>}
                 <span className="flex items-center gap-1.5"><Users className="h-4 w-4" />{startup.team} team members</span>
-                <span className="flex items-center gap-1.5"><TrendingUp className="h-4 w-4" />{startup.fundingStage}</span>
-                <Badge variant="outline">{startup.program}</Badge>
+                {startup.fundingStage && <span className="flex items-center gap-1.5"><TrendingUp className="h-4 w-4" />{startup.fundingStage}</span>}
+                {startup.program && <Badge variant="outline">{startup.program}</Badge>}
               </div>
             </div>
-            <Button asChild variant="outline" className="gap-2">
+            {startup.website && <Button asChild variant="outline" className="gap-2">
               <a href={startup.website} target="_blank" rel="noopener noreferrer">
                 <Globe className="h-4 w-4" /> Website <ExternalLink className="h-3 w-3" />
               </a>
-            </Button>
+            </Button>}
           </div>
         </div>
       </section>
@@ -67,27 +78,21 @@ export default function StartupProfilePage({ params }: { params: Promise<{ slug:
             <div className="space-y-8 lg:col-span-2">
               <div>
                 <h2 className="font-display text-xl font-bold">About</h2>
-                <p className="mt-3 text-muted-foreground">{startup.longDescription}</p>
+                <p className="mt-3 whitespace-pre-line text-muted-foreground">{startup.longDescription || startup.description}</p>
               </div>
 
-              <div className="grid gap-6 sm:grid-cols-2">
-                <Card className="border-border/60">
-                  <CardHeader className="pb-2"><h3 className="text-sm font-semibold">Problem</h3></CardHeader>
-                  <CardContent><p className="text-sm text-muted-foreground">{startup.problem}</p></CardContent>
-                </Card>
-                <Card className="border-border/60">
-                  <CardHeader className="pb-2"><h3 className="text-sm font-semibold">Solution</h3></CardHeader>
-                  <CardContent><p className="text-sm text-muted-foreground">{startup.solution}</p></CardContent>
-                </Card>
-                <Card className="border-border/60">
-                  <CardHeader className="pb-2"><h3 className="text-sm font-semibold">Product</h3></CardHeader>
-                  <CardContent><p className="text-sm text-muted-foreground">{startup.product}</p></CardContent>
-                </Card>
-                <Card className="border-border/60">
-                  <CardHeader className="pb-2"><h3 className="text-sm font-semibold">Traction</h3></CardHeader>
-                  <CardContent><p className="text-sm text-muted-foreground">{startup.traction}</p></CardContent>
-                </Card>
-              </div>
+              {[['Problem', startup.problem], ['Solution', startup.solution], ['Product', startup.product], ['Traction', startup.traction]].some(([, v]) => v) && (
+                <div className="grid gap-6 sm:grid-cols-2">
+                  {[['Problem', startup.problem], ['Solution', startup.solution], ['Product', startup.product], ['Traction', startup.traction]]
+                    .filter(([, v]) => v)
+                    .map(([label, value]) => (
+                      <Card key={label} className="border-border/60">
+                        <CardHeader className="pb-2"><h3 className="text-sm font-semibold">{label}</h3></CardHeader>
+                        <CardContent><p className="text-sm text-muted-foreground">{value}</p></CardContent>
+                      </Card>
+                    ))}
+                </div>
+              )}
 
               {startup.press.length > 0 && (
                 <div>
@@ -109,7 +114,7 @@ export default function StartupProfilePage({ params }: { params: Promise<{ slug:
 
             {/* Sidebar */}
             <div className="space-y-6">
-              <Card>
+              {startup.founders.length > 0 && <Card>
                 <CardHeader><h3 className="font-display font-bold">Founders</h3></CardHeader>
                 <CardContent className="space-y-4">
                   {startup.founders.map((f) => (
@@ -125,28 +130,36 @@ export default function StartupProfilePage({ params }: { params: Promise<{ slug:
                     </div>
                   ))}
                 </CardContent>
-              </Card>
+              </Card>}
 
               <Card>
                 <CardHeader><h3 className="font-display font-bold">Details</h3></CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Industry</span><span className="font-medium">{startup.industry}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Stage</span><span className="font-medium capitalize">{startup.stage.replace('_', ' ')}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Program</span><span className="font-medium">{startup.program}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Cohort</span><span className="font-medium">{startup.cohort}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Team Size</span><span className="font-medium">{startup.team}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Funding</span><span className="font-medium">{startup.fundingAmount}</span></div>
+                  {[
+                    ['Industry', startup.industry],
+                    ['Stage', startup.stage.replace('_', ' ')],
+                    ['Program', startup.program],
+                    ['Cohort', startup.cohort],
+                    ['Team Size', String(startup.team)],
+                    ['Funding', startup.fundingAmount],
+                  ]
+                    .filter(([, v]) => v)
+                    .map(([k, v]) => (
+                      <div key={k} className="flex justify-between"><span className="text-muted-foreground">{k}</span><span className="font-medium capitalize">{v}</span></div>
+                    ))}
                 </CardContent>
               </Card>
 
+              {Object.values(startup.socials).some(Boolean) && (
               <Card>
                 <CardHeader><h3 className="font-display font-bold">Connect</h3></CardHeader>
                 <CardContent className="flex gap-3">
-                  <Button size="icon" variant="outline" asChild><a href={startup.socials.twitter} target="_blank" rel="noopener noreferrer"><Twitter className="h-4 w-4" /></a></Button>
-                  <Button size="icon" variant="outline" asChild><a href={startup.socials.linkedin} target="_blank" rel="noopener noreferrer"><Linkedin className="h-4 w-4" /></a></Button>
-                  <Button size="icon" variant="outline" asChild><a href={startup.socials.instagram} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4" /></a></Button>
+                  {startup.socials.twitter && <Button size="icon" variant="outline" asChild><a href={startup.socials.twitter} target="_blank" rel="noopener noreferrer"><Twitter className="h-4 w-4" /></a></Button>}
+                  {startup.socials.linkedin && <Button size="icon" variant="outline" asChild><a href={startup.socials.linkedin} target="_blank" rel="noopener noreferrer"><Linkedin className="h-4 w-4" /></a></Button>}
+                  {startup.socials.instagram && <Button size="icon" variant="outline" asChild><a href={startup.socials.instagram} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4" /></a></Button>}
                 </CardContent>
               </Card>
+              )}
             </div>
           </div>
         </div>

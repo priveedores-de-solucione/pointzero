@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PzMark } from '@/components/shared/public-layout';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,9 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { ApplicationType } from '@/lib/types';
 import { Building2, Hammer, GraduationCap, Users, Briefcase, Handshake, CheckCircle2, ArrowLeft, ArrowRight } from 'lucide-react';
-import { applications } from '@/lib/api';
+import { applications, ApiError } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/auth-context';
 import { toast } from 'sonner';
 
 const roles: { type: ApplicationType; label: string; description: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -29,6 +31,22 @@ export default function ApplyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', country: '', city: '', motivation: '' });
 
+  const router = useRouter();
+  const { user } = useAuth();
+
+  // Pre-fill contact details for signed-in users.
+  useEffect(() => {
+    if (!user) return;
+    setForm((f) => ({
+      ...f,
+      firstName: f.firstName || user.first_name || '',
+      lastName: f.lastName || user.last_name || '',
+      email: f.email || user.email || '',
+      country: f.country || user.country || '',
+      city: f.city || user.city || '',
+    }));
+  }, [user]);
+
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,19 +54,27 @@ export default function ApplyPage() {
     if (!selected) return;
     setSubmitting(true);
     try {
-      await applications.submit({
-        application_type: selected,
-        first_name: form.firstName,
-        last_name: form.lastName,
-        email: form.email,
-        phone: form.phone || undefined,
-        country: form.country || undefined,
-        city: form.city || undefined,
-        answers: form.motivation ? { motivation: form.motivation } : undefined,
-      });
+      // The backend stores applicant details as free-form answers on the application.
+      const answers = Object.fromEntries(
+        Object.entries({
+          first_name: form.firstName,
+          last_name: form.lastName,
+          email: form.email,
+          phone: form.phone,
+          country: form.country,
+          city: form.city,
+          motivation: form.motivation,
+        }).filter(([, v]) => v),
+      );
+      await applications.submit({ application_type: selected, answers });
       setSubmitted(true);
     } catch (err: unknown) {
-      toast.error((err as Error).message ?? 'Failed to submit application');
+      if ((err as ApiError).status === 401) {
+        toast.error('Please sign in to submit your application.');
+        router.push('/login');
+        return;
+      }
+      toast.error((err as Error).message || 'Failed to submit application');
     } finally {
       setSubmitting(false);
     }

@@ -48,7 +48,7 @@ def list_startups(
 
 @router.get("/me")
 def my_startups(user: dict = Depends(get_current_user)):
-    res = supabase.table("pz_startup_members").select("role,is_founder,startups(*)").eq("user_id", user["id"]).execute()
+    res = supabase.table("pz_startup_members").select("role,is_founder,startups:pz_startups(*)").eq("user_id", user["id"]).execute()
     out = [
         {**r["startups"], "member_role": r["role"], "is_founder": r["is_founder"]}
         for r in res.data if r["startups"] and not r["startups"]["archived_at"]
@@ -66,7 +66,7 @@ def get_startup(slug: str, user: Optional[dict] = Depends(get_optional_user)):
         allowed = user and ("startups.read" in user["permissions"] or _membership(s["id"], user["id"]))
         if not allowed:
             raise AppError(404, "NOT_FOUND", "Startup not found")
-    founders = supabase.table("pz_startup_members").select("role,profiles(id,first_name,last_name,avatar_url)") \
+    founders = supabase.table("pz_startup_members").select("role,profiles:pz_profiles(id,first_name,last_name,avatar_url)") \
         .eq("startup_id", s["id"]).eq("is_founder", True).execute().data
     s["founders"] = founders
     return ok(s)
@@ -126,7 +126,7 @@ def update_visibility(startup_id: str, body: VisibilityUpdate, user: dict = Depe
 @router.get("/{startup_id}/members")
 def list_members(startup_id: str, user: dict = Depends(get_current_user)):
     _require_access(startup_id, user, founder_only=False, read=True)
-    res = supabase.table("pz_startup_members").select("*, profiles(first_name,last_name,avatar_url,email)") \
+    res = supabase.table("pz_startup_members").select("*, profiles:pz_profiles(first_name,last_name,avatar_url,email)") \
         .eq("startup_id", startup_id).execute()
     return ok(res.data)
 

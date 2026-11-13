@@ -164,10 +164,7 @@ def _decide(app_id: str, new_status: str, title: str, message: str, audit_action
     return ok(res.data[0])
 
 
-@admin_router.post("/{app_id}/accept")
-def accept(app_id: str, body: DecisionNote = DecisionNote(), user: dict = Depends(require_permission("applications.review"))):
-    return _decide(app_id, "ACCEPTED", "Application accepted",
-                   "Congratulations! Your application has been accepted.", "application.accepted", user, body.note)
+# accept (which also enrolls the applicant) is defined at the top of this module.
 
 
 @admin_router.post("/{app_id}/reject")

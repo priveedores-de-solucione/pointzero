@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/states';
 import { useApi } from '@/hooks/use-api';
 import { resources as resourcesApi, PaginatedResponse, Resource } from '@/lib/api';
+import { mapResource } from '@/lib/mappers';
 import { cn } from '@/lib/utils';
 
 const categories: { label: string; value: ResourceCategory | 'all' }[] = [
@@ -24,21 +25,6 @@ const categories: { label: string; value: ResourceCategory | 'all' }[] = [
   { label: 'Founder Stories', value: 'founder_stories' },
 ];
 
-function mapResource(r: Resource) {
-  return {
-    id: r.id,
-    slug: r.slug,
-    title: r.title,
-    excerpt: r.excerpt ?? '',
-    content: r.content ?? '',
-    cover: r.cover_url ?? 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=800',
-    author: r.author ?? 'POINTZERO',
-    authorAvatar: '',
-    category: r.category as ResourceCategory,
-    publishedDate: r.published_at ?? '',
-    readingTime: r.reading_time ?? 5,
-  };
-}
 
 export default function ResourcesPage() {
   const [activeCategory, setActiveCategory] = useState<ResourceCategory | 'all'>('all');

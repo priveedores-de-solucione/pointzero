@@ -20,4 +20,4 @@ class ProgramRepository(BaseRepository):
         }).execute().data[0]
 
     def enrollments_for_user(self, user_id: str) -> list:
-        return supabase.table("pz_enrollments").select("*, programs(*), cohorts(*)").eq("user_id", user_id).execute().data
+        return supabase.table("pz_enrollments").select("*, programs:pz_programs(*), cohorts:pz_cohorts(*)").eq("user_id", user_id).execute().data

@@ -31,7 +31,7 @@ def list_resources(
 
 @router.get("/{slug}")
 def get_resource(slug: str):
-    res = supabase.table("pz_resources").select("*, profiles(first_name,last_name,avatar_url)") \
+    res = supabase.table("pz_resources").select("*, profiles:pz_profiles(first_name,last_name,avatar_url)") \
         .eq("slug", slug).eq("status", "PUBLISHED").limit(1).execute()
     if not res.data:
         raise AppError(404, "NOT_FOUND", "Resource not found")

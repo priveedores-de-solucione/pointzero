@@ -1,12 +1,18 @@
-import { resources } from '@/lib/mock-data';
+'use client';
+
 import { PublicPage } from '@/components/shared/public-page';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, Clock } from 'lucide-react';
-import { NotFoundState } from '@/components/shared/states';
+import { LoadingState, NotFoundState } from '@/components/shared/states';
+import { useApi } from '@/hooks/use-api';
+import { resources as resourcesApi } from '@/lib/api';
+import { mapResource } from '@/lib/mappers';
 
 export default function ResourceDetailPage({ params }: { params: { slug: string } }) {
-  const resource = resources.find((r) => r.slug === params.slug);
+  const { data, loading } = useApi(() => resourcesApi.get(params.slug), [params.slug]);
+  const resource = data ? mapResource(data) : null;
+  if (loading) return <PublicPage><LoadingState className="py-32" /></PublicPage>;
   if (!resource) return <PublicPage><NotFoundState message="This resource does not exist." /></PublicPage>;
 
   return (
@@ -24,7 +30,7 @@ export default function ResourceDetailPage({ params }: { params: { slug: string 
           <div className="text-sm">
             <p className="font-medium">{resource.author}</p>
             <div className="flex items-center gap-3 text-muted-foreground">
-              <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{resource.publishedDate}</span>
+              <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{resource.publishedDate ? new Date(resource.publishedDate).toLocaleDateString('en-US', { dateStyle: 'medium' }) : ''}</span>
               <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{resource.readingTime} min read</span>
             </div>
           </div>
@@ -36,7 +42,7 @@ export default function ResourceDetailPage({ params }: { params: { slug: string 
         )}
 
         <div className="mt-8 prose prose-neutral dark:prose-invert max-w-none">
-          <p>{resource.content}</p>
+          {resource.content.split(/\n{2,}/).map((para, i) => <p key={i} className="whitespace-pre-line">{para}</p>)}
         </div>
       </article>
     </PublicPage>

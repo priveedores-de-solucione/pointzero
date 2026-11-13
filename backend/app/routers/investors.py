@@ -68,7 +68,7 @@ def dashboard(user: dict = Depends(get_current_user)):
     if inv["industries"]:
         recommended = _visible_query(inv).in_("industry", inv["industries"]).limit(5).execute().data
     saved = supabase.table("pz_saved_startups").select("id", count="exact").eq("investor_id", inv["id"]).limit(1).execute().count or 0
-    intros = supabase.table("pz_introduction_requests").select("*, startups(name,slug,logo_url)") \
+    intros = supabase.table("pz_introduction_requests").select("*, startups:pz_startups(name,slug,logo_url)") \
         .eq("investor_id", inv["id"]).order("created_at", desc=True).limit(5).execute().data
     flow = supabase.table("pz_investment_interests").select("status").eq("investor_id", inv["id"]).execute().data
     events = supabase.table("pz_events").select("id,title,slug,start_time,location").eq("status", "PUBLISHED") \
@@ -109,7 +109,7 @@ def startup_detail(startup_id: str, user: dict = Depends(get_current_user)):
     if not res.data:
         raise AppError(404, "NOT_FOUND", "Startup not found")
     s = res.data[0]
-    s["founders"] = supabase.table("pz_startup_members").select("role,profiles(id,first_name,last_name,avatar_url)") \
+    s["founders"] = supabase.table("pz_startup_members").select("role,profiles:pz_profiles(id,first_name,last_name,avatar_url)") \
         .eq("startup_id", startup_id).eq("is_founder", True).execute().data
     s["metrics"] = supabase.table("pz_startup_metrics").select("name,value,recorded_at") \
         .eq("startup_id", startup_id).order("recorded_at", desc=True).limit(20).execute().data
@@ -140,7 +140,7 @@ def unsave_startup(startup_id: str, user: dict = Depends(get_current_user)):
 @router.get("/saved-startups")
 def saved_startups(user: dict = Depends(get_current_user)):
     inv = _verified_investor(user)
-    res = supabase.table("pz_saved_startups").select("created_at, startups(*)").eq("investor_id", inv["id"]).order("created_at", desc=True).execute()
+    res = supabase.table("pz_saved_startups").select("created_at, startups:pz_startups(*)").eq("investor_id", inv["id"]).order("created_at", desc=True).execute()
     return ok([{**r["startups"], "saved_at": r["created_at"]} for r in res.data if r["startups"]])
 
 
@@ -149,7 +149,7 @@ def saved_startups(user: dict = Depends(get_current_user)):
 @router.get("/deal-flow")
 def deal_flow(user: dict = Depends(get_current_user)):
     inv = _verified_investor(user)
-    res = supabase.table("pz_investment_interests").select("*, startups(id,name,slug,logo_url,industry,stage)") \
+    res = supabase.table("pz_investment_interests").select("*, startups:pz_startups(id,name,slug,logo_url,industry,stage)") \
         .eq("investor_id", inv["id"]).order("updated_at", desc=True).execute()
     return ok(res.data)
 
@@ -191,7 +191,7 @@ def request_intro(body: IntroCreate, user: dict = Depends(get_current_user)):
 @router.get("/introductions")
 def my_introductions(user: dict = Depends(get_current_user)):
     inv = _verified_investor(user)
-    res = supabase.table("pz_introduction_requests").select("*, startups(name,slug,logo_url)") \
+    res = supabase.table("pz_introduction_requests").select("*, startups:pz_startups(name,slug,logo_url)") \
         .eq("investor_id", inv["id"]).order("created_at", desc=True).execute()
     return ok(res.data)
 
@@ -209,7 +209,7 @@ def incoming(user: dict = Depends(get_current_user)):
     if not ids:
         return ok([])
     res = supabase.table("pz_introduction_requests") \
-        .select("*, investors(organization,investor_type,investment_thesis), startups(name,slug)") \
+        .select("*, investors:pz_investors(organization,investor_type,investment_thesis), startups:pz_startups(name,slug)") \
         .in_("startup_id", ids).in_("status", ["founder_pending", "accepted", "declined"]) \
         .order("created_at", desc=True).execute()
     return ok(res.data)
@@ -262,7 +262,7 @@ def admin_list_investors(
     _: dict = Depends(require_permission("investors.read")),
 ):
     start, end = page_range(page, limit)
-    q = supabase.table("pz_investors").select("*, profiles(first_name,last_name,email)", count="exact")
+    q = supabase.table("pz_investors").select("*, profiles:pz_profiles(first_name,last_name,email)", count="exact")
     if verification_status:
         q = q.eq("verification_status", verification_status)
     res = q.order("created_at", desc=True).range(start, end).execute()
@@ -306,7 +306,7 @@ def admin_list_intros(
     _: dict = Depends(require_permission("investors.access")),
 ):
     start, end = page_range(page, limit)
-    q = supabase.table("pz_introduction_requests").select("*, investors(organization,investor_type), startups(name,slug)", count="exact")
+    q = supabase.table("pz_introduction_requests").select("*, investors:pz_investors(organization,investor_type), startups:pz_startups(name,slug)", count="exact")
     if status:
         q = q.eq("status", status)
     res = q.order("created_at", desc=True).range(start, end).execute()

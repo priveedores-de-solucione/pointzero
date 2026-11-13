@@ -56,11 +56,11 @@ def _monthly(table: str, col: str = "created_at", months: int = 6) -> list[dict]
 @router.get("/analytics")
 def analytics(months: int = Query(6, ge=1, le=24), _: dict = Depends(require_permission("analytics.read"))):
     return ok({
-        "applications": _monthly("applications", "submitted_at", months),
-        "user_growth": _monthly("profiles", "created_at", months),
-        "startup_growth": _monthly("startups", "created_at", months),
-        "investor_activity": _monthly("introduction_requests", "created_at", months),
-        "event_registrations": _monthly("event_registrations", "registered_at", months),
+        "applications": _monthly("pz_applications", "submitted_at", months),
+        "user_growth": _monthly("pz_profiles", "created_at", months),
+        "startup_growth": _monthly("pz_startups", "created_at", months),
+        "investor_activity": _monthly("pz_introduction_requests", "created_at", months),
+        "event_registrations": _monthly("pz_event_registrations", "registered_at", months),
     })
 
 
@@ -125,7 +125,7 @@ def list_mentors(
     _: dict = Depends(require_permission("mentors.manage")),
 ):
     start, end = page_range(page, limit)
-    q = supabase.table("pz_mentors").select("*, profiles(first_name,last_name,email)", count="exact")
+    q = supabase.table("pz_mentors").select("*, profiles:pz_profiles(first_name,last_name,email)", count="exact")
     if is_verified is not None:
         q = q.eq("is_verified", is_verified)
     res = q.order("created_at", desc=True).range(start, end).execute()

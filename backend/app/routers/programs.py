@@ -16,7 +16,7 @@ admin_router = APIRouter(prefix="/admin", tags=["Admin: Programs"])
 # ---------- Public ----------
 @router.get("/my")
 def my_programs(user: dict = Depends(get_current_user)):
-    res = supabase.table("pz_enrollments").select("*, programs(*), cohorts(*)").eq("user_id", user["id"]).execute()
+    res = supabase.table("pz_enrollments").select("*, programs:pz_programs(*), cohorts:pz_cohorts(*)").eq("user_id", user["id"]).execute()
     return ok(res.data)
 @router.get("")
 def list_programs(

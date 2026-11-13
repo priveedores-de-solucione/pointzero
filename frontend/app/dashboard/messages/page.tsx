@@ -13,14 +13,19 @@ import { useApi } from '@/hooks/use-api';
 import { messages as messagesApi, Conversation, Message, PaginatedResponse } from '@/lib/api';
 import { useAuth } from '@/context/auth-context';
 import { toast } from 'sonner';
+import { fullName } from '@/lib/mappers';
 
-function getDisplayName(c: Conversation) {
-  if (c.other_user) return `${c.other_user.first_name} ${c.other_user.last_name}`.trim();
-  return c.name ?? 'Unknown';
+function otherMembers(c: Conversation, meId?: string) {
+  return (c.members ?? []).filter((m) => m.user_id !== meId);
 }
 
-function getAvatar(c: Conversation) {
-  return c.other_user?.avatar_url ?? c.avatar ?? '';
+function getDisplayName(c: Conversation, meId?: string) {
+  const names = otherMembers(c, meId).map((m) => fullName(m.profiles)).filter(Boolean);
+  return names.join(', ') || 'Conversation';
+}
+
+function getAvatar(c: Conversation, meId?: string) {
+  return otherMembers(c, meId)[0]?.profiles?.avatar_url ?? '';
 }
 
 export default function MessagesPage() {
@@ -37,16 +42,21 @@ export default function MessagesPage() {
   const conversations = convData?.data ?? [];
 
   const { data: threadData, loading: threadLoading, refetch: refetchThread } = useApi<PaginatedResponse<Message>>(
-    () => activeId ? messagesApi.thread(activeId, { limit: 50 }) : Promise.resolve({ items: [], total: 0, page: 1, limit: 50, pages: 0 }),
+    () => activeId ? messagesApi.thread(activeId, { limit: 50 }) : Promise.resolve<PaginatedResponse<Message>>({ items: [], total: 0, page: 1, limit: 50, pages: 0 }),
     [activeId],
   );
 
-  const msgs = threadData?.items ?? [];
+  // API returns newest first; show oldest at the top.
+  const msgs = [...(threadData?.items ?? [])].reverse();
   const active = conversations.find((c) => c.id === activeId);
 
   useEffect(() => {
     if (conversations.length && !activeId) setActiveId(conversations[0].id);
   }, [conversations, activeId]);
+
+  useEffect(() => {
+    if (activeId) messagesApi.markRead(activeId).catch(() => undefined);
+  }, [activeId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -82,19 +92,19 @@ export default function MessagesPage() {
                 )}
               >
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={getAvatar(c)} />
-                  <AvatarFallback>{getDisplayName(c)[0]}</AvatarFallback>
+                  <AvatarImage src={getAvatar(c, user?.id)} />
+                  <AvatarFallback>{getDisplayName(c, user?.id)[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium truncate">{getDisplayName(c)}</p>
+                    <p className="text-sm font-medium truncate">{getDisplayName(c, user?.id)}</p>
                     {(c.unread_count ?? 0) > 0 && (
                       <Badge className="ml-1 h-4 w-4 shrink-0 rounded-full p-0 flex items-center justify-center text-[10px]">
                         {c.unread_count}
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{c.last_message}</p>
+                  <p className="text-xs text-muted-foreground truncate">{c.last_message?.body ?? 'No messages yet'}</p>
                 </div>
               </button>
             ))}
@@ -105,10 +115,10 @@ export default function MessagesPage() {
             <>
               <div className="flex items-center gap-3 border-b border-border px-5 py-3">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={getAvatar(active)} />
-                  <AvatarFallback>{getDisplayName(active)[0]}</AvatarFallback>
+                  <AvatarImage src={getAvatar(active, user?.id)} />
+                  <AvatarFallback>{getDisplayName(active, user?.id)[0]}</AvatarFallback>
                 </Avatar>
-                <p className="text-sm font-medium">{getDisplayName(active)}</p>
+                <p className="text-sm font-medium">{getDisplayName(active, user?.id)}</p>
               </div>
 
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
@@ -117,7 +127,7 @@ export default function MessagesPage() {
                   : msgs.map((m) => (
                     <div key={m.id} className={cn('flex', m.sender_id === user?.id ? 'justify-end' : 'justify-start')}>
                       <div className={cn('max-w-xs rounded-xl px-4 py-2.5 text-sm', m.sender_id === user?.id ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
-                        {m.content}
+                        {m.body}
                       </div>
                     </div>
                   ))}

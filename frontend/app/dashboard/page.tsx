@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
 import { useApi } from '@/hooks/use-api';
-import { programs as programsApi, events as eventsApi, startups as startupsApi, milestones as milestonesApi, Enrollment, AppEvent, Milestone, PaginatedResponse } from '@/lib/api';
+import { programs as programsApi, events as eventsApi, milestones as milestonesApi, Enrollment, AppEvent, Milestone, PaginatedResponse } from '@/lib/api';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -21,20 +21,15 @@ export default function DashboardPage() {
     programsApi.mine().then((d) => ({ data: d })),
   );
 
-  const { data: myStartups } = useApi<{ data: { id: string; name: string }[] }>(() =>
-    startupsApi.mine().then((d) => ({ data: d })),
-  );
-
   const { data: eventsData } = useApi<PaginatedResponse<AppEvent>>(() =>
     eventsApi.list({ when: 'upcoming', limit: 3 }),
   );
 
-  const firstStartupId = myStartups?.data?.[0]?.id;
-  const { data: milestonesData } = useApi<{ data: Milestone[] }>(
-    () => firstStartupId
-      ? milestonesApi.list(firstStartupId).then((d) => ({ data: d }))
-      : Promise.resolve({ data: [] }),
-    [firstStartupId],
+  // All milestones across the user's startups; backend enums are UPPER_SNAKE.
+  const { data: milestonesData } = useApi<{ data: Milestone[] }>(() =>
+    milestonesApi.mine().then((d) => ({
+      data: d.map((m) => ({ ...m, status: m.status.toLowerCase(), stage: m.stage.toLowerCase() })),
+    })),
   );
 
   const enrollmentList = enrollments?.data ?? [];

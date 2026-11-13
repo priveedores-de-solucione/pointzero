@@ -31,7 +31,7 @@ class StartupRepository(BaseRepository):
         return [r["user_id"] for r in res.data]
 
     def member_startup_ids(self, user_id: str, founder_only: bool = False) -> list[str]:
-        q = supabase.table("pz_startup_members").select("startup_id, startups(archived_at)").eq("user_id", user_id)
+        q = supabase.table("pz_startup_members").select("startup_id, startups:pz_startups(archived_at)").eq("user_id", user_id)
         if founder_only:
             q = q.eq("is_founder", True)
         return [r["startup_id"] for r in q.execute().data if r["startups"] and not r["startups"]["archived_at"]]

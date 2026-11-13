@@ -1,35 +1,45 @@
+'use client';
+
 import { DashboardShell } from '@/components/shared/dashboard-layout';
-import { partners } from '@/lib/mock-data';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { AdminList, fmtDate, runAction } from '@/components/shared/admin-list';
+import { admin as adminApi, Partner } from '@/lib/api';
+import { humanize } from '@/lib/mappers';
 
 export default function AdminPartnersPage() {
   return (
     <DashboardShell type="admin" title="Partners" subtitle="Manage ecosystem partners">
-      <div className="space-y-6">
-        <div className="flex items-center justify-between gap-4">
-          <Input placeholder="Search partners…" className="max-w-xs" />
-          <Button size="sm">Add Partner</Button>
-        </div>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {partners.map((p) => (
-            <Card key={p.id} className="transition-all hover:shadow-md">
-              <CardContent className="pt-5">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">{p.name}</p>
-                    <Badge variant="secondary" className="mt-1 text-xs capitalize">{p.category}</Badge>
-                  </div>
-                  <Button variant="ghost" size="sm">Edit</Button>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">{p.description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      <AdminList<Partner>
+        filters={['PENDING', 'APPROVED', 'REJECTED']}
+        fetcher={({ page, limit, filter }) => adminApi.partners({ page, limit, status: filter })}
+        emptyTitle="No partners"
+        columns={[
+          {
+            header: 'Organization',
+            cell: (p) => (
+              <div>
+                <p className="font-medium">{p.organization}</p>
+                {p.website && <a href={p.website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">{p.website}</a>}
+              </div>
+            ),
+          },
+          { header: 'Type', cell: (p) => <Badge variant="secondary" className="text-xs">{humanize(p.partner_type)}</Badge> },
+          { header: 'Contact', cell: (p) => <span className="text-sm text-muted-foreground">{p.contact_email ?? '—'}</span> },
+          { header: 'Status', cell: (p) => <Badge variant={p.status === 'APPROVED' ? 'default' : 'outline'} className="text-xs">{humanize(p.status)}</Badge> },
+          { header: 'Applied', cell: (p) => <span className="text-xs text-muted-foreground">{fmtDate(p.created_at)}</span> },
+        ]}
+        actions={(p, refetch) => (
+          <>
+            {p.status !== 'APPROVED' && (
+              <Button variant="ghost" size="sm" onClick={() => runAction(() => adminApi.approvePartner(p.id), 'Partner approved', refetch)}>Approve</Button>
+            )}
+            {p.status !== 'REJECTED' && (
+              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => runAction(() => adminApi.rejectPartner(p.id), 'Partner rejected', refetch)}>Reject</Button>
+            )}
+          </>
+        )}
+      />
     </DashboardShell>
   );
 }

@@ -12,13 +12,13 @@ class CohortRepository(BaseRepository):
         return self.query().eq("program_id", program_id).order("number").execute().data
 
     def for_user(self, user_id: str) -> list:
-        res = supabase.table("pz_enrollments").select("status, cohort_id, cohorts(*), programs(*)") \
+        res = supabase.table("pz_enrollments").select("status, cohort_id, cohorts:pz_cohorts(*), programs:pz_programs(*)") \
             .eq("user_id", user_id).execute()
         return [r for r in res.data if r["cohorts"]]
 
     def members(self, cohort_id: str) -> list:
         return supabase.table("pz_enrollments") \
-            .select("*, profiles(first_name,last_name,email,avatar_url)").eq("cohort_id", cohort_id).execute().data
+            .select("*, profiles:pz_profiles(first_name,last_name,email,avatar_url)").eq("cohort_id", cohort_id).execute().data
 
     def assign_user(self, cohort_id: str, user_id: str) -> Optional[dict]:
         cohort = self.get(cohort_id)

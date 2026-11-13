@@ -14,17 +14,11 @@ type MilestoneStage = 'validate' | 'build' | 'launch' | 'scale';
 const stages: MilestoneStage[] = ['validate', 'build', 'launch', 'scale'];
 
 export default function MilestonesPage() {
-  const { data: myStartups } = useApi<{ data: { id: string }[] }>(() =>
-    apiClient.startups.mine().then((d) => ({ data: d })),
-  );
-
-  const firstStartupId = myStartups?.data?.[0]?.id;
-
-  const { data, loading } = useApi<{ data: Milestone[] }>(
-    () => firstStartupId
-      ? apiClient.milestones.list(firstStartupId).then((d) => ({ data: d }))
-      : Promise.resolve({ data: [] }),
-    [firstStartupId],
+  // All milestones across the user's startups; backend enums are UPPER_SNAKE.
+  const { data, loading } = useApi<{ data: Milestone[] }>(() =>
+    apiClient.milestones.mine().then((d) => ({
+      data: d.map((m) => ({ ...m, status: m.status.toLowerCase(), stage: m.stage.toLowerCase() })),
+    })),
   );
 
   const milestoneList = data?.data ?? [];

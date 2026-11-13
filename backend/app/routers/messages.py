@@ -24,7 +24,7 @@ def list_conversations(user: dict = Depends(get_current_user)):
     if not ids:
         return ok([])
     convs = supabase.table("pz_conversations").select("*").in_("id", ids).order("updated_at", desc=True).execute().data
-    members = supabase.table("pz_conversation_members").select("conversation_id,user_id,profiles(first_name,last_name,avatar_url)") \
+    members = supabase.table("pz_conversation_members").select("conversation_id,user_id,profiles:pz_profiles(first_name,last_name,avatar_url)") \
         .in_("conversation_id", ids).execute().data
     # Recent window only (1000 rows). Move to a SQL view/RPC if unread counts must be exact at scale.
     msgs = supabase.table("pz_messages").select("conversation_id,sender_id,body,read_at,created_at") \
@@ -68,7 +68,7 @@ def create_conversation(body: ConversationCreate, user: dict = Depends(get_curre
 def get_conversation(conversation_id: str, user: dict = Depends(get_current_user)):
     _require_member(conversation_id, user)
     conv = supabase.table("pz_conversations").select("*").eq("id", conversation_id).limit(1).execute().data[0]
-    conv["members"] = supabase.table("pz_conversation_members").select("user_id,profiles(first_name,last_name,avatar_url)") \
+    conv["members"] = supabase.table("pz_conversation_members").select("user_id,profiles:pz_profiles(first_name,last_name,avatar_url)") \
         .eq("conversation_id", conversation_id).execute().data
     return ok(conv)
 

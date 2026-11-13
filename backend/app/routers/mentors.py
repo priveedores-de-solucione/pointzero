@@ -12,7 +12,7 @@ from app.services.mentorship_service import mentor_by_id as _mentor_by_id, my_me
 mentors_router = APIRouter(prefix="/mentors", tags=["Mentors"])
 router = APIRouter(prefix="/mentorship", tags=["Mentorship"])
 
-PROFILE = "profiles(first_name,last_name,avatar_url)"
+PROFILE = "profiles:pz_profiles(first_name,last_name,avatar_url)"
 
 # ---------- directory ----------
 
@@ -60,14 +60,14 @@ def create_request(body: RequestCreate, user: dict = Depends(require_roles("FOUN
 @router.get("/requests/me")
 def my_requests(user: dict = Depends(get_current_user)):
     mentor = _my_mentor(user)
-    q = supabase.table("pz_mentorship_requests").select("*, profiles(first_name,last_name,avatar_url)")
+    q = supabase.table("pz_mentorship_requests").select("*, profiles:pz_profiles(first_name,last_name,avatar_url)")
     q = q.eq("mentor_id", mentor["id"]) if mentor else q.eq("founder_id", user["id"])
     return ok(q.order("created_at", desc=True).execute().data)
 
 
 @router.patch("/requests/{request_id}")
 def update_request(request_id: str, body: RequestUpdate, user: dict = Depends(get_current_user)):
-    res = supabase.table("pz_mentorship_requests").select("*, mentors(user_id)").eq("id", request_id).limit(1).execute()
+    res = supabase.table("pz_mentorship_requests").select("*, mentors:pz_mentors(user_id)").eq("id", request_id).limit(1).execute()
     if not res.data:
         raise AppError(404, "NOT_FOUND", "Request not found")
     req = res.data[0]
@@ -91,7 +91,7 @@ def update_request(request_id: str, body: RequestUpdate, user: dict = Depends(ge
 # ---------- sessions ----------
 
 def _load_session(session_id: str, user: dict):
-    res = supabase.table("pz_mentor_sessions").select("*, mentors(user_id)").eq("id", session_id).limit(1).execute()
+    res = supabase.table("pz_mentor_sessions").select("*, mentors:pz_mentors(user_id)").eq("id", session_id).limit(1).execute()
     if not res.data:
         raise AppError(404, "NOT_FOUND", "Session not found")
     s = res.data[0]

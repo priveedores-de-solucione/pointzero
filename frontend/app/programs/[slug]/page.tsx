@@ -1,12 +1,21 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { PublicPage } from '@/components/shared/public-page';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Check, ArrowUpRight } from 'lucide-react';
-import { programs, mentors } from '@/lib/mock-data';
+import { toast } from 'sonner';
+import { useApi } from '@/hooks/use-api';
+import { useAuth } from '@/context/auth-context';
+import { programs as programsApi, applications as applicationsApi, ApiError } from '@/lib/api';
+import { mapProgram } from '@/lib/mappers';
+import type { Mentor } from '@/lib/types';
+import { LoadingState } from '@/components/shared/states';
+
+const APPLICANT_TYPES = ['FOUNDER', 'BUILDER', 'STUDENT', 'MENTOR', 'INVESTOR', 'PARTNER'];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -30,10 +39,47 @@ function CheckList({ items }: { items: string[] }) {
   );
 }
 
-export default function ProgramDetailPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params);
-  const [appState, setAppState] = useState<'idle' | 'applied'>('idle');
-  const program = programs.find((p) => p.slug === slug);
+export default function ProgramDetailPage({ params }: { params: { slug: string } }) {
+  const { slug } = params;
+  const router = useRouter();
+  const { user } = useAuth();
+  const [appState, setAppState] = useState<'idle' | 'submitting' | 'applied'>('idle');
+
+  const { data, loading } = useApi(async () => {
+    const p = await programsApi.get(slug);
+    const curriculum = await programsApi.curriculum(p.id).catch(() => []);
+    return { raw: p, program: { ...mapProgram(p), curriculum: curriculum.map((c) => ({ week: c.week, title: c.title, description: c.description ?? '' })) } };
+  }, [slug]);
+  const program = data?.program;
+
+  const apply = async () => {
+    if (!user) {
+      toast.error('Sign in to apply to this program.');
+      router.push('/login');
+      return;
+    }
+    setAppState('submitting');
+    try {
+      await applicationsApi.submit({
+        application_type: APPLICANT_TYPES.includes(user.role) ? user.role : 'FOUNDER',
+        program_id: data!.raw.id,
+        answers: { first_name: user.first_name ?? '', last_name: user.last_name ?? '', email: user.email },
+      });
+      setAppState('applied');
+      toast.success('Application submitted');
+    } catch (err) {
+      setAppState('idle');
+      toast.error((err as ApiError).message || 'Could not submit application');
+    }
+  };
+
+  if (loading) {
+    return (
+      <PublicPage>
+        <LoadingState className="py-32" />
+      </PublicPage>
+    );
+  }
 
   if (!program) {
     return (
@@ -48,11 +94,11 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ slug: 
     );
   }
 
-  const programMentors = mentors.filter((m) => program.mentors.includes(m.id));
+  const programMentors: Mentor[] = [];
   const capacityPct = program.capacity ? Math.round((program.enrolled / program.capacity) * 100) : 0;
-  const closed = program.status === 'closed';
-  const ctaLabel = appState === 'applied' ? 'Application submitted' : closed ? 'Applications closed' : 'Apply now';
-  const ctaDisabled = appState === 'applied' || closed;
+  const closed = program.status === 'closed' || data?.raw.application_open === false;
+  const ctaLabel = appState === 'applied' ? 'Application submitted' : appState === 'submitting' ? 'Submitting…' : closed ? 'Applications closed' : 'Apply now';
+  const ctaDisabled = appState !== 'idle' || closed;
   const statusLabel = program.status === 'active' ? 'OPEN' : program.status.toUpperCase();
 
   return (
@@ -113,7 +159,7 @@ export default function ProgramDetailPage({ params }: { params: Promise<{ slug: 
                   </div>
                 </div>
 
-                <Button className="w-full" size="lg" disabled={ctaDisabled} onClick={() => setAppState('applied')}>
+                <Button className="w-full" size="lg" disabled={ctaDisabled} onClick={apply}>
                   {ctaLabel}
                   {!ctaDisabled && <ArrowUpRight className="ml-2 h-4 w-4" />}
                 </Button>

@@ -1,10 +1,15 @@
+'use client';
+
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { PublicPage } from '@/components/shared/public-page';
 import { PzHero, PzButton } from '@/components/shared/pz-hero';
 import { SectionHeader, StrikeList, JourneyRail } from '@/components/shared/pz-sections';
 import { StartupCard, ProgramCard, SpaceCard } from '@/components/shared/pz-cards';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { startups, programs, mentors, campusLocations } from '@/lib/mock-data';
+import { campusLocations } from '@/lib/mock-data'; // static campus content — no backend endpoint
+import { useApi } from '@/hooks/use-api';
+import { programs as programsApi, startups as startupsApi } from '@/lib/api';
+import { mapProgram, mapStartup } from '@/lib/mappers';
 
 const roles = ['Founders', 'Builders', 'Designers', 'Students', 'Mentors', 'Investors', 'Operators'];
 
@@ -16,7 +21,11 @@ const investorStats = [
 ];
 
 export default function HomePage() {
-  const publicStartups = startups.filter((s) => s.visibility === 'public').slice(0, 3);
+  const { data: programData } = useApi(() => programsApi.list({ limit: 3 }), []);
+  const { data: startupData } = useApi(() => startupsApi.list({ limit: 8 }), []);
+  const programs = (programData?.items ?? []).map(mapProgram);
+  const startups = (startupData?.items ?? []).map(mapStartup);
+  const publicStartups = startups.slice(0, 3);
 
   return (
     <PublicPage>
@@ -118,10 +127,10 @@ export default function HomePage() {
             </div>
             <div className="flex items-center lg:justify-end">
               <div className="flex -space-x-3">
-                {mentors.map((m) => (
-                  <Avatar key={m.id} className="h-14 w-14 border-2 border-pz-surface">
-                    <AvatarImage src={m.avatar} alt={m.name} />
-                    <AvatarFallback className="bg-muted">{m.name[0]}</AvatarFallback>
+                {startups.slice(0, 5).map((s) => (
+                  <Avatar key={s.id} className="h-14 w-14 border-2 border-pz-surface">
+                    <AvatarImage src={s.logo} alt={s.name} />
+                    <AvatarFallback className="bg-muted">{s.name[0]}</AvatarFallback>
                   </Avatar>
                 ))}
                 <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-pz-surface bg-muted font-mono text-xs text-pz-white">

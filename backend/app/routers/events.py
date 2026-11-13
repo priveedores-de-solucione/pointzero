@@ -147,7 +147,7 @@ def admin_archive(event_id: str, user: dict = Depends(require_permission("events
 
 @admin_router.get("/{event_id}/registrations")
 def admin_registrations(event_id: str, _: dict = Depends(require_permission("events.manage"))):
-    res = supabase.table("pz_event_registrations").select("*, profiles(first_name,last_name,email)") \
+    res = supabase.table("pz_event_registrations").select("*, profiles:pz_profiles(first_name,last_name,email)") \
         .eq("event_id", event_id).eq("status", "REGISTERED").execute()
     return ok(res.data)
 

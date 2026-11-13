@@ -1,55 +1,52 @@
+'use client';
+
+import Link from 'next/link';
 import { DashboardShell } from '@/components/shared/dashboard-layout';
-import { startups } from '@/lib/mock-data';
-import { StatusBadge } from '@/components/shared/pz-cards';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AdminList, fmtDate } from '@/components/shared/admin-list';
+import { admin as adminApi, Startup } from '@/lib/api';
 
 export default function AdminStartupsPage() {
   return (
     <DashboardShell type="admin" title="Startups" subtitle="Manage and approve startups">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <Input placeholder="Search startups…" className="max-w-xs" />
-          <Button size="sm">Add Startup</Button>
-        </div>
-        <div className="rounded-xl border border-border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Startup</TableHead>
-                <TableHead>Industry</TableHead>
-                <TableHead>Stage</TableHead>
-                <TableHead>Visibility</TableHead>
-                <TableHead>Program</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {startups.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-7 w-7 rounded-md">
-                        <AvatarImage src={s.logo} />
-                        <AvatarFallback className="rounded-md">{s.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <p className="text-sm font-medium">{s.name}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{s.industry}</TableCell>
-                  <TableCell><Badge variant="secondary" className="capitalize text-xs">{s.stage.replace('_', ' ')}</Badge></TableCell>
-                  <TableCell><Badge variant="outline" className="capitalize text-xs">{s.visibility}</Badge></TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{s.program}</TableCell>
-                  <TableCell><Button variant="ghost" size="sm">Edit</Button></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      <AdminList<Startup>
+        searchPlaceholder="Search startups…"
+        fetcher={({ page, limit, q }) => adminApi.startups({ page, limit, q })}
+        emptyTitle="No startups yet"
+        columns={[
+          {
+            header: 'Startup',
+            cell: (s) => (
+              <div className="flex items-center gap-3">
+                <Avatar className="h-7 w-7 rounded-md">
+                  <AvatarImage src={s.logo_url} />
+                  <AvatarFallback className="rounded-md">{s.name[0]}</AvatarFallback>
+                </Avatar>
+                <p className="text-sm font-medium">{s.name}</p>
+              </div>
+            ),
+          },
+          { header: 'Industry', cell: (s) => <span className="text-sm text-muted-foreground">{s.industry ?? '—'}</span> },
+          { header: 'Stage', cell: (s) => (s.stage ? <Badge variant="secondary" className="text-xs">{s.stage}</Badge> : '—') },
+          {
+            header: 'Visibility',
+            cell: (s) => (
+              <div className="flex gap-1">
+                <Badge variant="outline" className="text-xs">{s.is_public ? 'Public' : 'Private'}</Badge>
+                {s.investor_visible && <Badge variant="outline" className="text-xs">Investors</Badge>}
+              </div>
+            ),
+          },
+          { header: 'Created', cell: (s) => <span className="text-xs text-muted-foreground">{fmtDate(s.created_at)}</span> },
+        ]}
+        actions={(s) => (
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/startups/${s.slug}`}>View</Link>
+          </Button>
+        )}
+      />
     </DashboardShell>
   );
 }

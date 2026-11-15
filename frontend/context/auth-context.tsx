@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { auth as authApi, User, setToken, clearToken } from '@/lib/api';
-import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+import { supabase, landedFromAuthRedirect } from '@/lib/supabase';
 
 const STAFF_ROLES = ['ADMIN', 'SUPER_ADMIN', 'STAFF'];
 
@@ -57,6 +58,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const loadProfile = useCallback(async (accessToken: string): Promise<User> => {
     setToken(accessToken);
@@ -81,6 +83,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.access_token) {
         loadProfile(session.access_token)
+          .then((profile) => {
+            // OAuth / email-verification redirects can land on a page other than /auth/callback
+            // (e.g. when Supabase falls back to its Site URL). Route the user onward from here too.
+            if (landedFromAuthRedirect && window.location.pathname !== '/auth/callback') {
+              router.replace(postAuthPath(profile));
+            }
+          })
           .catch(() => undefined)
           .finally(() => setLoading(false));
       } else {
@@ -101,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadProfile]);
+  }, [loadProfile, router]);
 
   /** Sign in with email/password. Returns the path the caller should redirect to. */
   const signInWithEmail = async (email: string, password: string): Promise<string> => {

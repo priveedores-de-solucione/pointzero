@@ -1,6 +1,6 @@
 /**
  * API client — talks to the FastAPI backend.
- * Set NEXT_PUBLIC_API_URL in .env.local (e.g. http://localhost:8000/api/v1 — the backend mounts all routes under /api/v1)
+ * Set NEXT_PUBLIC_API_URL in .env.local (e.g. https://pointzero-xzvv.onrender.com/api/v1 — the backend mounts all routes under /api/v1)
  *
  * Backend conventions (see backend/app/utils/helpers.py & core/exceptions.py):
  *   success:    { data: T, meta: {} }
@@ -8,7 +8,7 @@
  *   error:      { error: { code, message, details } }
  */
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://pointzero-xzvv.onrender.com/api/v1';
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;

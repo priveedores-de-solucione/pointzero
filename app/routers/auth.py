@@ -12,7 +12,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 PUBLIC_FIELDS = {
     "id", "email", "first_name", "last_name", "avatar_url", "bio", "country",
     "city", "website", "linkedin", "twitter", "github", "role", "status", "permissions",
-    "onboarding_completed",
+    "onboarding_completed", "profile_public",
 }
 
 

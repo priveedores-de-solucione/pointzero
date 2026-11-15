@@ -10,6 +10,12 @@ class BaseRepository:
     table: str = ""
     order_column: str = "created_at"
 
+    def __init_subclass__(cls, **kwargs):
+        # All POINTZERO tables live under the "pz_" prefix (pz_profiles, pz_startups, ...).
+        super().__init_subclass__(**kwargs)
+        if cls.table and not cls.table.startswith("pz_"):
+            cls.table = f"pz_{cls.table}"
+
     def query(self, columns: str = "*", **kwargs):
         return supabase.table(self.table).select(columns, **kwargs)
 

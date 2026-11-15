@@ -16,6 +16,9 @@ app.add_middleware(
     CORSMiddleware,
     # FRONTEND_URL may list several origins, comma-separated (e.g. local dev + production).
     allow_origins=[o.strip().rstrip("/") for o in settings.FRONTEND_URL.split(",") if o.strip()],
+    # Always allow the production domain (with or without www) and local dev,
+    # so a missing/mistyped FRONTEND_URL on the host can't block the site.
+    allow_origin_regex=r"https://(www\.)?frompointzero\.com|http://localhost:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
